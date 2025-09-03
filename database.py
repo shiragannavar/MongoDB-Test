@@ -88,6 +88,50 @@ class DatabaseManager:
         result = self.collection.delete_one({"_id": user_id})
         return result.deleted_count > 0
     
+    def sync_mongodb_to_hcd(self) -> Dict[str, Any]:
+        """Sync all MongoDB records to HCD without transformation"""
+        if self.db_type != 'mongodb':
+            return {"success": False, "message": "Sync only available from MongoDB"}
+        
+        try:
+            # Get all users from current MongoDB collection
+            mongodb_users = list(self.collection.find({}))
+            
+            if not mongodb_users:
+                return {"success": True, "message": "No users to sync", "synced_count": 0}
+            
+            # Setup HCD connection temporarily
+            hcd_manager = DatabaseManager()
+            hcd_manager.db_type = 'hcd'
+            hcd_manager._setup_hcd()
+            
+            synced_count = 0
+            errors = []
+            
+            for user in mongodb_users:
+                try:
+                    # Insert user into HCD as-is (no transformation)
+                    hcd_manager.collection.insert_one(user)
+                    synced_count += 1
+                except Exception as e:
+                    # Skip if user already exists or other errors
+                    errors.append(f"User {user.get('_id', 'unknown')}: {str(e)}")
+                    continue
+            
+            message = f"Successfully synced {synced_count} users to DataStax HCD"
+            if errors:
+                message += f". {len(errors)} users skipped (likely duplicates)"
+            
+            return {
+                "success": True, 
+                "message": message,
+                "synced_count": synced_count,
+                "errors": errors[:5]  # Return first 5 errors only
+            }
+            
+        except Exception as e:
+            return {"success": False, "message": f"Sync failed: {str(e)}"}
+    
     def get_database_info(self) -> Dict[str, str]:
         """Get information about current database connection"""
         return {

@@ -40,9 +40,16 @@
                 <h5 class="mb-0">
                     <i class="fas fa-users me-2"></i>User Profiles ({{ users|length }})
                 </h5>
-                <a href="{{ url_for('create_user') }}" class="btn btn-primary btn-sm">
-                    <i class="fas fa-plus me-1"></i>Add New User
-                </a>
+                <div class="d-flex gap-2">
+                    {% if db_info.type == 'mongodb' %}
+                    <button class="btn btn-warning btn-sm" id="syncToHcdBtn" onclick="syncToHcd()">
+                        <i class="fas fa-sync me-1"></i>Sync to DataStax HCD
+                    </button>
+                    {% endif %}
+                    <a href="{{ url_for('create_user') }}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus me-1"></i>Add New User
+                    </a>
+                </div>
             </div>
             <div class="card-body">
                 {% if users %}

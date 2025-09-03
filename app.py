@@ -69,7 +69,7 @@ def api_db_info():
 
 @app.route('/api/switch_database', methods=['POST'])
 def switch_database():
-    """API endpoint to switch database type"""
+    """Switch between MongoDB and HCD databases"""
     try:
         data = request.get_json()
         new_db_type = data.get('database_type')
@@ -77,32 +77,29 @@ def switch_database():
         if new_db_type not in ['mongodb', 'hcd']:
             return jsonify({'success': False, 'message': 'Invalid database type'})
         
-        # Update environment variable
-        os.environ['DATABASE_TYPE'] = new_db_type
-        
         # Update .env file
-        env_content = []
-        env_file_path = '.env'
+        env_path = '.env'
+        env_vars = {}
         
-        # Read current .env file
-        if os.path.exists(env_file_path):
-            with open(env_file_path, 'r') as f:
-                env_content = f.readlines()
+        # Read existing .env file
+        if os.path.exists(env_path):
+            with open(env_path, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith('#') and '=' in line:
+                        key, value = line.split('=', 1)
+                        env_vars[key] = value
         
-        # Update DATABASE_TYPE line
-        updated = False
-        for i, line in enumerate(env_content):
-            if line.startswith('DATABASE_TYPE='):
-                env_content[i] = f'DATABASE_TYPE={new_db_type}\n'
-                updated = True
-                break
-        
-        if not updated:
-            env_content.insert(1, f'DATABASE_TYPE={new_db_type}\n')
+        # Update DATABASE_TYPE
+        env_vars['DATABASE_TYPE'] = new_db_type
         
         # Write back to .env file
-        with open(env_file_path, 'w') as f:
-            f.writelines(env_content)
+        with open(env_path, 'w') as f:
+            for key, value in env_vars.items():
+                f.write(f'{key}={value}\n')
+        
+        # Update environment variable for current session
+        os.environ['DATABASE_TYPE'] = new_db_type
         
         # Reinitialize database manager
         global db_manager
@@ -110,12 +107,20 @@ def switch_database():
         
         return jsonify({
             'success': True, 
-            'message': f'Switched to {new_db_type.upper()}',
-            'database_type': new_db_type
+            'message': f'Successfully switched to {new_db_type.upper()}'
         })
         
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/sync_to_hcd', methods=['POST'])
+def sync_to_hcd():
+    """Sync all MongoDB records to DataStax HCD"""
+    try:
+        result = db_manager.sync_mongodb_to_hcd()
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Sync failed: {str(e)}'})
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5001)

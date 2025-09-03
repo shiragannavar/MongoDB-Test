@@ -167,3 +167,34 @@ function showAlert(message, type) {
         }
     }, 4000);
 }
+
+function syncToHcd() {
+    const syncBtn = document.getElementById('syncToHcdBtn');
+    
+    // Disable button and show loading state
+    syncBtn.disabled = true;
+    syncBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Syncing...';
+    
+    fetch('/api/sync_to_hcd', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert(data.message, 'success');
+        } else {
+            showAlert('Sync failed: ' + data.message, 'danger');
+        }
+    })
+    .catch(error => {
+        showAlert('Sync failed: ' + error.message, 'danger');
+    })
+    .finally(() => {
+        // Re-enable button
+        syncBtn.disabled = false;
+        syncBtn.innerHTML = '<i class="fas fa-sync me-1"></i>Sync to DataStax HCD';
+    });
+}

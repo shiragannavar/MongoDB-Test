@@ -15,6 +15,7 @@ This application showcases how applications built for MongoDB can seamlessly mig
 ## ✨ Features
 
 - **🔄 Live Database Switching**: Toggle between MongoDB and HCD instantly via UI toggle
+- **📦 One-Click Data Migration**: Sync all MongoDB records to DataStax HCD with a single click
 - **👥 User Management**: Create, view, and delete user profiles
 - **🎨 Modern UI**: Responsive Bootstrap interface with real-time database status
 - **🔗 Consistent Schema**: UUID-based document structure across both databases
@@ -87,8 +88,26 @@ Visit `http://localhost:5001` to see the application in action!
 1. **Visit the application** at `http://localhost:5001`
 2. **Locate the toggle switch** in the Database Status card
 3. **Toggle left (unchecked)**: MongoDB (green badge)
-4. **Toggle right (checked)**: HCD (blue badge)
+4. **Toggle right (checked)**: DataStax HCD (yellow badge)
 5. **Watch the magic**: Instant database switching without restart!
+
+### 📦 One-Click Data Migration
+
+#### MongoDB to DataStax HCD Sync
+When MongoDB is active, you'll see a **"Sync to DataStax HCD"** button:
+
+1. **Ensure MongoDB is active** (toggle switch left/unchecked)
+2. **Click "Sync to DataStax HCD"** button in the user list header
+3. **Watch the sync process**: Button shows spinner with "Syncing..." text
+4. **Success notification**: "Successfully synced X users to DataStax HCD"
+5. **Switch to DataStax HCD**: Toggle right to verify all data copied
+
+#### Migration Features
+- **Zero Transformation**: Records copied exactly as-is from MongoDB
+- **Duplicate Handling**: Skips existing records gracefully
+- **Progress Feedback**: Loading states and success/error notifications
+- **Bulk Operation**: Migrates all users in a single operation
+- **Error Resilience**: Continues sync even if individual records fail
 
 ### Traditional Configuration Method
 Alternatively, you can still switch databases via configuration:
@@ -101,6 +120,7 @@ Alternatively, you can still switch databases via configuration:
 - **Same interface**: Identical functionality regardless of database
 - **Consistent data**: UUID-based schema works across both databases
 - **Zero code changes**: Same application logic for both databases
+- **Data migration**: One-click sync from MongoDB to DataStax HCD
 
 ## 📋 API Reference
 
@@ -112,12 +132,14 @@ Alternatively, you can still switch databases via configuration:
 | `/api/users` | GET | JSON API - Get all users |
 | `/api/db_info` | GET | Current database connection info |
 | `/api/switch_database` | POST | Switch between MongoDB and HCD |
+| `/api/sync_to_hcd` | POST | Migrate all MongoDB records to DataStax HCD |
 
 ## 🏗️ Project Structure
 
 ```
 ├── app.py                 # Flask web application
 ├── database.py            # Database abstraction layer
+├── insert_sample_data.py  # Script to generate 25 sample records
 ├── requirements.txt       # Python dependencies
 ├── .env.example          # Environment template
 ├── README.md             # This file
@@ -126,7 +148,7 @@ Alternatively, you can still switch databases via configuration:
 │   ├── index.html       # User dashboard
 │   └── create_user.html # User creation form
 └── static/              # Frontend assets
-    ├── css/style.css    # Custom styles
+    ├── css/style.css    # Custom styles with VI branding
     └── js/main.js       # JavaScript functionality
 ```
 
@@ -149,6 +171,27 @@ class DatabaseManager:
     
     def delete_user(self, user_id):
         # Same logic, different clients
+    
+    def sync_mongodb_to_hcd(self):
+        # One-click migration from MongoDB to DataStax HCD
+```
+
+### Data Migration Implementation
+The sync functionality demonstrates true database portability:
+
+```python
+def sync_mongodb_to_hcd(self):
+    # Get all MongoDB records
+    mongodb_users = list(self.collection.find({}))
+    
+    # Setup temporary HCD connection
+    hcd_manager = DatabaseManager()
+    hcd_manager.db_type = 'hcd'
+    hcd_manager._setup_hcd()
+    
+    # Insert records without transformation
+    for user in mongodb_users:
+        hcd_manager.collection.insert_one(user)
 ```
 
 ### Consistent Schema
@@ -167,11 +210,13 @@ Both databases use identical document structure:
 ## 🎯 Key Demo Points
 
 1. **Live Database Switching**: Toggle between databases without restarting
-2. **Zero Code Changes**: Same application logic works with both databases
-3. **Visual Confirmation**: UI clearly shows which database is active
-4. **Identical Functionality**: All features work exactly the same way
-5. **Schema Consistency**: UUID-based documents ensure portability
-6. **Production Ready**: Error handling, validation, and modern UI
+2. **One-Click Data Migration**: Sync all MongoDB records to DataStax HCD instantly
+3. **Zero Code Changes**: Same application logic works with both databases
+4. **Visual Confirmation**: UI clearly shows which database is active
+5. **Identical Functionality**: All features work exactly the same way
+6. **Schema Consistency**: UUID-based documents ensure portability
+7. **Production Ready**: Error handling, validation, and modern UI
+8. **Sample Data**: 25 realistic user records for comprehensive testing
 
 ## 🛠️ Technologies Used
 

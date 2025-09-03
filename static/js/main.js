@@ -47,12 +47,71 @@ document.getElementById('confirmDelete').addEventListener('click', function() {
     }
 });
 
+// Database toggle functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const dbToggle = document.getElementById('dbToggle');
+    if (dbToggle) {
+        dbToggle.addEventListener('change', function() {
+            const newDbType = this.checked ? 'hcd' : 'mongodb';
+            
+            // Show loading state
+            showAlert('Switching database...', 'info');
+            
+            fetch('/api/switch_database', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    database_type: newDbType
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update UI elements
+                    updateDatabaseStatus(data.database_type);
+                    showAlert(data.message, 'success');
+                    
+                    // Reload page to refresh user list from new database
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    // Revert toggle state on error
+                    dbToggle.checked = !dbToggle.checked;
+                    showAlert('Error switching database: ' + data.message, 'danger');
+                }
+            })
+            .catch(error => {
+                // Revert toggle state on error
+                dbToggle.checked = !dbToggle.checked;
+                showAlert('Error switching database: ' + error.message, 'danger');
+            });
+        });
+    }
+});
+
+function updateDatabaseStatus(dbType) {
+    const dbBadge = document.getElementById('dbBadge');
+    const dbTypeSpan = document.getElementById('dbType');
+    
+    if (dbBadge) {
+        dbBadge.textContent = dbType.toUpperCase();
+        dbBadge.className = `badge bg-${dbType === 'mongodb' ? 'success' : 'info'}`;
+    }
+    
+    if (dbTypeSpan) {
+        dbTypeSpan.textContent = dbType.charAt(0).toUpperCase() + dbType.slice(1);
+    }
+}
+
 function showAlert(message, type) {
     // Create alert element
     const alertDiv = document.createElement('div');
     alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
     alertDiv.innerHTML = `
-        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>
+        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'info' ? 'info-circle' : 'exclamation-triangle'} me-2"></i>
         ${message}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;

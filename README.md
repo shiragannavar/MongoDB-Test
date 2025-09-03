@@ -14,12 +14,13 @@ This application showcases how applications built for MongoDB can seamlessly mig
 
 ## ✨ Features
 
-- **🔄 Database Portability**: Switch between MongoDB and HCD with zero code changes
+- **🔄 Live Database Switching**: Toggle between MongoDB and HCD instantly via UI toggle
 - **👥 User Management**: Create, view, and delete user profiles
 - **🎨 Modern UI**: Responsive Bootstrap interface with real-time database status
 - **🔗 Consistent Schema**: UUID-based document structure across both databases
 - **⚡ Real-time Operations**: Instant CRUD operations with confirmation dialogs
 - **📊 Database Monitoring**: Visual indicators showing active database type
+- **🚀 Zero Downtime Switching**: Change databases without restarting the application
 
 ## 🏗️ Architecture
 
@@ -80,26 +81,26 @@ python app.py
 
 Visit `http://localhost:5001` to see the application in action!
 
-## 🔄 Database Portability Demo
+## 🔄 Live Database Switching Demo
 
-### Step 1: MongoDB Setup
-1. Configure MongoDB Atlas connection in `.env`
-2. Start application: `python app.py`
-3. Create sample users through the web interface
-4. Note the **"MONGODB"** badge in the database status
+### Real-time Database Toggle
+1. **Visit the application** at `http://localhost:5001`
+2. **Locate the toggle switch** in the Database Status card
+3. **Toggle left (unchecked)**: MongoDB (green badge)
+4. **Toggle right (checked)**: HCD (blue badge)
+5. **Watch the magic**: Instant database switching without restart!
 
-### Step 2: Switch to HCD
-1. Stop the application (`Ctrl+C`)
-2. Update `.env`: Change `DATABASE_TYPE=hcd`
-3. Add HCD connection details
-4. Restart: `python app.py`
-5. Note the **"HCD"** badge - same interface, different database!
+### Traditional Configuration Method
+Alternatively, you can still switch databases via configuration:
+1. Update `.env`: Change `DATABASE_TYPE=mongodb` or `DATABASE_TYPE=hcd`
+2. Restart the application
+3. Verify the database badge updates accordingly
 
-### Step 3: Verify Compatibility
-- All CRUD operations work identically
-- Same user interface and functionality
-- Consistent UUID-based document structure
-- Zero code changes required
+### Verify Compatibility
+- **Live switching**: Toggle between databases in real-time
+- **Same interface**: Identical functionality regardless of database
+- **Consistent data**: UUID-based schema works across both databases
+- **Zero code changes**: Same application logic for both databases
 
 ## 📋 API Reference
 
@@ -110,6 +111,7 @@ Visit `http://localhost:5001` to see the application in action!
 | `/delete_user/<id>` | POST | Delete user by UUID |
 | `/api/users` | GET | JSON API - Get all users |
 | `/api/db_info` | GET | Current database connection info |
+| `/api/switch_database` | POST | Switch between MongoDB and HCD |
 
 ## 🏗️ Project Structure
 
@@ -164,11 +166,12 @@ Both databases use identical document structure:
 
 ## 🎯 Key Demo Points
 
-1. **Zero Code Changes**: Same application logic works with both databases
-2. **Visual Confirmation**: UI clearly shows which database is active
-3. **Identical Functionality**: All features work exactly the same way
-4. **Schema Consistency**: UUID-based documents ensure portability
-5. **Production Ready**: Error handling, validation, and modern UI
+1. **Live Database Switching**: Toggle between databases without restarting
+2. **Zero Code Changes**: Same application logic works with both databases
+3. **Visual Confirmation**: UI clearly shows which database is active
+4. **Identical Functionality**: All features work exactly the same way
+5. **Schema Consistency**: UUID-based documents ensure portability
+6. **Production Ready**: Error handling, validation, and modern UI
 
 ## 🛠️ Technologies Used
 
@@ -206,14 +209,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - [MongoDB Atlas](https://www.mongodb.com/atlas)
 - [DataStax HCD Documentation](https://docs.datastax.com/en/astra-db-serverless/)
-- [Data API Comparison Guide](https://docs.datastax.com/en/astra-db-serverless/api-reference/compare-dataapi.html)
-
-## 📞 Support
-
-For questions or issues:
-- Create an issue in this repository
-- Contact: [Your Contact Information]
-
----
+- [Data API Comparison Guide](https://docs.datastax.com/en/astra-db-se---
 
 **Built with ❤️ to demonstrate the power of database portability**

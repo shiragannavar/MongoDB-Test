@@ -14,18 +14,18 @@
                     <div class="form-check form-switch">
                         <input class="form-check-input" type="checkbox" id="dbToggle" 
                                {% if db_info.type == 'hcd' %}checked{% endif %}>
-                        <label class="form-check-label" for="dbToggle">
-                            <small>MongoDB / HCD</small>
+                        <label class="form-check-label" for="db-toggle">
+                            <small>MongoDB / DataStax HCD</small>
                         </label>
                     </div>
                     <span class="badge bg-{% if db_info.type == 'mongodb' %}success{% elif db_info.type == 'hcd' %}info{% else %}danger{% endif %}" id="dbBadge">
-                        {{ db_info.type.upper() }}
+                        {% if db_info.type == 'hcd' %}DataStax HCD{% else %}{{ db_info.type.upper() }}{% endif %}
                     </span>
                 </div>
             </div>
             <div class="card-body">
                 <p class="mb-0">
-                    <strong>Type:</strong> <span id="dbType">{{ db_info.type.title() }}</span> | 
+                    <strong>Type:</strong> <span id="dbType">{% if db_info.type == 'hcd' %}DataStax HCD{% else %}{{ db_info.type.title() }}{% endif %}</span> | 
                     <strong>Status:</strong> 
                     <span class="text-{% if db_info.status == 'connected' %}success{% else %}danger{% endif %}" id="dbStatus">
                         {{ db_info.status.title() }}

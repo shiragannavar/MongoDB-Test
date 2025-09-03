@@ -70,7 +70,27 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 if (data.success) {
                     // Update UI elements
-                    updateDatabaseStatus(data.database_type);
+                    const dbBadge = document.getElementById('dbBadge');
+                    const dbTypeSpan = document.getElementById('dbType');
+                    
+                    if (dbBadge) {
+                        if (newDbType === 'hcd') {
+                            dbBadge.textContent = 'DataStax HCD';
+                            dbBadge.className = 'badge bg-info';
+                        } else {
+                            dbBadge.textContent = 'MONGODB';
+                            dbBadge.className = 'badge bg-success';
+                        }
+                    }
+                    
+                    if (dbTypeSpan) {
+                        if (newDbType === 'hcd') {
+                            dbTypeSpan.textContent = 'DataStax HCD';
+                        } else {
+                            dbTypeSpan.textContent = 'Mongodb';
+                        }
+                    }
+                    
                     showAlert(data.message, 'success');
                     
                     // Reload page to refresh user list from new database
@@ -107,23 +127,43 @@ function updateDatabaseStatus(dbType) {
 }
 
 function showAlert(message, type) {
+    // Create alert container if it doesn't exist
+    let alertContainer = document.querySelector('.alert-container');
+    if (!alertContainer) {
+        alertContainer = document.createElement('div');
+        alertContainer.className = 'alert-container';
+        document.body.appendChild(alertContainer);
+    }
+    
+    // Map types to custom classes
+    const typeClass = type === 'success' ? 'alert-success-custom' : 
+                     type === 'danger' ? 'alert-danger-custom' : 
+                     `alert-${type}`;
+    
     // Create alert element
     const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.className = `alert ${typeClass} alert-notification alert-dismissible fade show`;
+    
+    // Add icon based on type
+    const icon = type === 'success' ? 'fas fa-check-circle' : 
+                type === 'danger' ? 'fas fa-exclamation-triangle' : 
+                'fas fa-info-circle';
+    
     alertDiv.innerHTML = `
-        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'info' ? 'info-circle' : 'exclamation-triangle'} me-2"></i>
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <div class="d-flex align-items-center">
+            <i class="${icon} alert-icon me-2"></i>
+            <span>${message}</span>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+        </div>
     `;
     
-    // Insert at the top of the container
-    const container = document.querySelector('.container');
-    container.insertBefore(alertDiv, container.firstChild);
+    // Add to container
+    alertContainer.appendChild(alertDiv);
     
-    // Auto-dismiss after 5 seconds
+    // Auto-dismiss after 4 seconds
     setTimeout(() => {
-        if (alertDiv.parentNode) {
+        if (alertDiv && alertDiv.parentNode) {
             alertDiv.remove();
         }
-    }, 5000);
+    }, 4000);
 }

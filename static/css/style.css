@@ -156,3 +156,53 @@ body {
     background-clip: text;
     font-weight: bold;
 }
+
+/* Bottom-right notification positioning */
+.alert-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1050;
+    max-width: 350px;
+}
+
+.alert-notification {
+    margin-bottom: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border: none;
+    border-radius: 8px;
+    animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Success notification - proper green */
+.alert-success-custom {
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+    color: #155724;
+}
+
+.alert-success-custom .alert-icon {
+    color: #28a745;
+}
+
+/* Error notification - VI red */
+.alert-danger-custom {
+    background-color: rgba(230, 0, 18, 0.1);
+    border-color: var(--vi-red);
+    color: var(--vi-dark-red);
+}
+
+.alert-danger-custom .alert-icon {
+    color: var(--vi-red);
+}

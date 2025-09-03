@@ -67,41 +67,26 @@ class DatabaseManager:
             import uuid
             user_data['_id'] = str(uuid.uuid4())
         
-        if self.db_type == 'mongodb':
-            # For MongoDB, explicitly set the _id as string to avoid ObjectId generation
-            result = self.collection.insert_one(user_data)
-            return user_data
-        else:  # HCD
-            result = self.collection.insert_one(user_data)
-            return result.inserted_document
+        # Same API for both MongoDB and HCD
+        result = self.collection.insert_one(user_data)
+        return user_data
     
     def get_all_users(self) -> List[Dict[str, Any]]:
         """Get all users"""
-        if self.db_type == 'mongodb':
-            users = list(self.collection.find({}))
-            # _id is already a string UUID, no conversion needed
-            return users
-        else:  # HCD
-            cursor = self.collection.find({})
-            return list(cursor)
+        # Same API for both MongoDB and HCD
+        cursor = self.collection.find({})
+        return list(cursor)
     
     def get_user_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
         """Get user by ID"""
-        if self.db_type == 'mongodb':
-            # Query by string UUID directly
-            return self.collection.find_one({"_id": user_id})
-        else:  # HCD
-            return self.collection.find_one({"_id": user_id})
+        # Same API for both MongoDB and HCD
+        return self.collection.find_one({"_id": user_id})
     
     def delete_user(self, user_id: str) -> bool:
         """Delete user by ID"""
-        if self.db_type == 'mongodb':
-            # Query by string UUID directly
-            result = self.collection.delete_one({"_id": user_id})
-            return result.deleted_count > 0
-        else:  # HCD
-            result = self.collection.delete_one({"_id": user_id})
-            return result.deleted_count > 0
+        # Same API for both MongoDB and HCD
+        result = self.collection.delete_one({"_id": user_id})
+        return result.deleted_count > 0
     
     def get_database_info(self) -> Dict[str, str]:
         """Get information about current database connection"""

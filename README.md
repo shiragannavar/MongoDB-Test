@@ -60,16 +60,16 @@ cp .env.example .env
 #### For MongoDB Atlas:
 ```env
 DATABASE_TYPE=mongodb
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/?retryWrites=true&w=majority
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/?retryWrites=true&w=majority
 MONGODB_DATABASE=user_profiles
 ```
 
 #### For DataStax HCD:
 ```env
 DATABASE_TYPE=hcd
-HCD_API_ENDPOINT=http://your-hcd-endpoint:8181
-HCD_USERNAME=your_username
-HCD_PASSWORD=your_password
+HCD_API_ENDPOINT=http://<your-hcd-endpoint>:8181
+HCD_USERNAME=<your_username>
+HCD_PASSWORD=<your_password>
 HCD_KEYSPACE=default_keyspace
 ```
 
@@ -183,11 +183,11 @@ Both databases use identical document structure:
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `DATABASE_TYPE` | Database type (`mongodb` or `hcd`) | `mongodb` |
-| `MONGODB_URI` | MongoDB connection string | `mongodb+srv://...` |
+| `MONGODB_URI` | MongoDB connection string | `mongodb+srv://<username>:<password>@<cluster>.mongodb.net/` |
 | `MONGODB_DATABASE` | MongoDB database name | `user_profiles` |
 | `HCD_API_ENDPOINT` | HCD Data API endpoint | `http://localhost:8181` |
-| `HCD_USERNAME` | HCD username | `admin` |
-| `HCD_PASSWORD` | HCD password | `password` |
+| `HCD_USERNAME` | HCD username | `<your_username>` |
+| `HCD_PASSWORD` | HCD password | `<your_password>` |
 | `HCD_KEYSPACE` | HCD keyspace name | `default_keyspace` |
 
 ## 🤝 Contributing

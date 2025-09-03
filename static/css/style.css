@@ -1,39 +1,91 @@
+/* VI Brand Colors */
+:root {
+    --vi-red: #E60012;
+    --vi-yellow: #FFD100;
+    --vi-dark-red: #C70011;
+    --vi-light-red: #FF1A2E;
+    --vi-gray: #6c757d;
+    --vi-light-gray: #f8f9fa;
+}
+
 body {
-    background-color: #f8f9fa;
+    background-color: var(--vi-light-gray);
 }
 
 .card {
     border: none;
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    box-shadow: 0 0.125rem 0.25rem rgba(230, 0, 18, 0.1);
     border-radius: 0.5rem;
 }
 
 .card-header {
     background-color: #fff;
-    border-bottom: 1px solid #dee2e6;
+    border-bottom: 1px solid rgba(230, 0, 18, 0.1);
     border-radius: 0.5rem 0.5rem 0 0 !important;
 }
 
 .table th {
     border-top: none;
     font-weight: 600;
-    color: #495057;
+    color: var(--vi-dark-red);
 }
 
 .btn {
     border-radius: 0.375rem;
 }
 
+.btn-primary {
+    background-color: var(--vi-red);
+    border-color: var(--vi-red);
+}
+
+.btn-primary:hover {
+    background-color: var(--vi-dark-red);
+    border-color: var(--vi-dark-red);
+}
+
+.btn-primary:focus {
+    background-color: var(--vi-dark-red);
+    border-color: var(--vi-dark-red);
+    box-shadow: 0 0 0 0.25rem rgba(230, 0, 18, 0.25);
+}
+
 .navbar-brand {
     font-weight: 600;
+    color: white !important;
+}
+
+.navbar-dark {
+    background-color: var(--vi-red) !important;
+}
+
+.navbar-dark .navbar-nav .nav-link {
+    color: white !important;
+}
+
+.navbar-dark .navbar-nav .nav-link:hover {
+    color: var(--vi-yellow) !important;
 }
 
 .text-muted {
-    color: #6c757d !important;
+    color: var(--vi-gray) !important;
 }
 
 .badge {
     font-size: 0.75em;
+}
+
+.bg-success {
+    background-color: var(--vi-red) !important;
+}
+
+.bg-info {
+    background-color: var(--vi-yellow) !important;
+    color: var(--vi-dark-red) !important;
+}
+
+.bg-danger {
+    background-color: var(--vi-dark-red) !important;
 }
 
 .modal-content {
@@ -42,8 +94,18 @@ body {
 }
 
 .form-control:focus {
-    border-color: #86b7fe;
-    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    border-color: var(--vi-red);
+    box-shadow: 0 0 0 0.25rem rgba(230, 0, 18, 0.25);
+}
+
+.form-check-input:checked {
+    background-color: var(--vi-red);
+    border-color: var(--vi-red);
+}
+
+.form-check-input:focus {
+    border-color: var(--vi-red);
+    box-shadow: 0 0 0 0.25rem rgba(230, 0, 18, 0.25);
 }
 
 .alert {
@@ -51,6 +113,46 @@ body {
     border-radius: 0.5rem;
 }
 
+.alert-success {
+    background-color: rgba(230, 0, 18, 0.1);
+    border-color: var(--vi-red);
+    color: var(--vi-dark-red);
+}
+
+.alert-info {
+    background-color: rgba(255, 209, 0, 0.1);
+    border-color: var(--vi-yellow);
+    color: var(--vi-dark-red);
+}
+
 .table-hover tbody tr:hover {
-    background-color: rgba(0, 0, 0, 0.025);
+    background-color: rgba(230, 0, 18, 0.025);
+}
+
+.text-success {
+    color: var(--vi-red) !important;
+}
+
+.btn-danger {
+    background-color: var(--vi-dark-red);
+    border-color: var(--vi-dark-red);
+}
+
+.btn-danger:hover {
+    background-color: #A5000E;
+    border-color: #A5000E;
+}
+
+/* Custom VI accent elements */
+.vi-accent {
+    background: linear-gradient(135deg, var(--vi-red) 0%, var(--vi-yellow) 100%);
+    color: white;
+}
+
+.vi-text-gradient {
+    background: linear-gradient(135deg, var(--vi-red) 0%, var(--vi-yellow) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: bold;
 }

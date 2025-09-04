@@ -46,12 +46,15 @@ class DatabaseManager:
         client = DataAPIClient(environment=Environment.HCD)
         self.database = client.get_database(api_endpoint, token=token)
         
-        # Ensure keyspace exists
+        # Ensure keyspace exists and set it as active
         try:
             self.database.get_database_admin().create_keyspace(keyspace, update_db_keyspace=True)
         except Exception:
-            # Keyspace might already exist
+            # Keyspace might already exist, just use it
             pass
+        
+        # Set the keyspace for this database connection
+        self.database = self.database.use_keyspace(keyspace)
         
         # Create or get the users collection
         try:

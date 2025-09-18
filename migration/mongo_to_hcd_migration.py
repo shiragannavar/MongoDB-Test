@@ -106,8 +106,8 @@ class MongoToHCDMigrator:
             try:
                 database.get_database_admin().create_keyspace(keyspace)
                 logger.info(f"📁 Created keyspace: {keyspace}")
-            except Exception:
-                logger.info(f"📁 Keyspace already exists: {keyspace}")
+            except Exception as e:
+                logger.info(f"📁 Keyspace already exists or creation failed: {keyspace} - {str(e)}")
             
             # Get collection with keyspace (following the sample code pattern)
             try:

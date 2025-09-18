@@ -13,9 +13,13 @@ telecom_handler = TelecomDataHandler()
 def index():
     """Main page showing subscribers"""
     try:
-        subscribers = telecom_handler.get_all_subscribers(limit=100)
-        subscriber_stats = telecom_handler.get_database_stats()
-        db_info = db_manager.get_database_info()
+        # Create fresh instances to get current database type
+        current_db_manager = DatabaseManager()
+        current_telecom_handler = TelecomDataHandler()
+        
+        subscribers = current_telecom_handler.get_all_subscribers(limit=100)
+        subscriber_stats = current_telecom_handler.get_database_stats()
+        db_info = current_db_manager.get_database_info()
         return render_template('index.html', 
                              subscribers=subscribers,
                              subscriber_stats=subscriber_stats,
@@ -24,14 +28,14 @@ def index():
         return render_template('index.html', 
                              subscribers=[],
                              subscriber_stats={},
-                             db_info={"type": "error", "status": str(e)})
-
+                             db_info={'type': 'error', 'status': str(e)})
 
 @app.route('/api/db_info')
 def api_db_info():
     """API endpoint to get database info"""
     try:
-        db_info = db_manager.get_database_info()
+        current_db_manager = DatabaseManager()
+        db_info = current_db_manager.get_database_info()
         return jsonify(db_info)
     except Exception as e:
         return jsonify({'type': 'error', 'status': str(e)})
@@ -87,7 +91,8 @@ def switch_database():
 def sync_subscribers_to_hcd():
     """Sync all MongoDB subscriber records to DataStax HCD"""
     try:
-        result = db_manager.sync_subscribers_to_hcd()
+        current_db_manager = DatabaseManager()
+        result = current_db_manager.sync_subscribers_to_hcd()
         return jsonify(result)
     except Exception as e:
         return jsonify({'success': False, 'message': f'Subscriber sync failed: {str(e)}'})
@@ -97,8 +102,9 @@ def sync_subscribers_to_hcd():
 def api_subscribers():
     """Get all subscribers"""
     try:
+        current_telecom_handler = TelecomDataHandler()
         limit = request.args.get('limit', 100, type=int)
-        subscribers = telecom_handler.get_all_subscribers(limit=limit)
+        subscribers = current_telecom_handler.get_all_subscribers(limit=limit)
         return jsonify({'success': True, 'subscribers': subscribers, 'count': len(subscribers)})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
@@ -107,7 +113,8 @@ def api_subscribers():
 def api_subscriber_stats():
     """Get subscriber statistics"""
     try:
-        stats = telecom_handler.get_database_stats()
+        current_telecom_handler = TelecomDataHandler()
+        stats = current_telecom_handler.get_database_stats()
         return jsonify({'success': True, 'stats': stats})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})

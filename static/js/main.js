@@ -45,10 +45,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     showAlert(data.message, 'success');
                     
-                    // Reload page to refresh user list from new database
+                    // Refresh subscriber data from new database
                     setTimeout(() => {
-                        location.reload();
-                    }, 1500);
+                        refreshSubscriberData();
+                    }, 1000);
                 } else {
                     // Revert toggle state on error
                     dbToggle.checked = !dbToggle.checked;

@@ -1,62 +1,31 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 from database import DatabaseManager
+from telecom_data_handler import TelecomDataHandler, create_sample_subscriber
 import uuid
 import os
 from datetime import datetime
 
 app = Flask(__name__)
 db_manager = DatabaseManager()
+telecom_handler = TelecomDataHandler()
 
 @app.route('/')
 def index():
-    """Main page showing all users"""
+    """Main page showing subscribers"""
     try:
-        users = db_manager.get_all_users()
+        subscribers = telecom_handler.get_all_subscribers(limit=100)
+        subscriber_stats = telecom_handler.get_database_stats()
         db_info = db_manager.get_database_info()
-        return render_template('index.html', users=users, db_info=db_info)
+        return render_template('index.html', 
+                             subscribers=subscribers,
+                             subscriber_stats=subscriber_stats,
+                             db_info=db_info)
     except Exception as e:
-        return render_template('index.html', users=[], db_info={"type": "error", "status": str(e)})
+        return render_template('index.html', 
+                             subscribers=[],
+                             subscriber_stats={},
+                             db_info={"type": "error", "status": str(e)})
 
-@app.route('/create_user', methods=['GET', 'POST'])
-def create_user():
-    """Create a new user"""
-    if request.method == 'POST':
-        try:
-            user_data = {
-                'name': request.form['name'],
-                'email': request.form['email'],
-                'age': int(request.form['age']),
-                'city': request.form['city'],
-                'created_at': datetime.utcnow().isoformat()
-            }
-            
-            created_user = db_manager.create_user(user_data)
-            return redirect(url_for('index'))
-        except Exception as e:
-            return render_template('create_user.html', error=str(e))
-    
-    return render_template('create_user.html')
-
-@app.route('/delete_user/<user_id>', methods=['POST'])
-def delete_user(user_id):
-    """Delete a user"""
-    try:
-        success = db_manager.delete_user(user_id)
-        if success:
-            return jsonify({'success': True, 'message': 'User deleted successfully'})
-        else:
-            return jsonify({'success': False, 'message': 'User not found'})
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
-
-@app.route('/api/users')
-def api_users():
-    """API endpoint to get all users"""
-    try:
-        users = db_manager.get_all_users()
-        return jsonify({'success': True, 'users': users})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/api/db_info')
 def api_db_info():
@@ -113,14 +82,194 @@ def switch_database():
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
 
-@app.route('/api/sync_to_hcd', methods=['POST'])
-def sync_to_hcd():
-    """Sync all MongoDB records to DataStax HCD"""
+
+@app.route('/api/sync_subscribers_to_hcd', methods=['POST'])
+def sync_subscribers_to_hcd():
+    """Sync all MongoDB subscriber records to DataStax HCD"""
     try:
-        result = db_manager.sync_mongodb_to_hcd()
+        result = db_manager.sync_subscribers_to_hcd()
         return jsonify(result)
     except Exception as e:
-        return jsonify({'success': False, 'message': f'Sync failed: {str(e)}'})
+        return jsonify({'success': False, 'message': f'Subscriber sync failed: {str(e)}'})
+
+# Telecom Subscriber API Endpoints
+@app.route('/api/subscribers')
+def api_subscribers():
+    """Get all subscribers"""
+    try:
+        limit = request.args.get('limit', 100, type=int)
+        subscribers = telecom_handler.get_all_subscribers(limit=limit)
+        return jsonify({'success': True, 'subscribers': subscribers, 'count': len(subscribers)})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/subscribers/stats')
+def api_subscriber_stats():
+    """Get subscriber statistics"""
+    try:
+        stats = telecom_handler.get_database_stats()
+        return jsonify({'success': True, 'stats': stats})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/subscribers/active')
+def api_active_subscribers():
+    """Get all active subscribers"""
+    try:
+        subscribers = telecom_handler.get_active_subscribers()
+        return jsonify({'success': True, 'subscribers': subscribers, 'count': len(subscribers)})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/subscribers/provider/<provider>')
+def api_subscribers_by_provider(provider):
+    """Get subscribers by provider"""
+    try:
+        subscribers = telecom_handler.find_subscribers_by_provider(provider)
+        return jsonify({'success': True, 'subscribers': subscribers, 'count': len(subscribers)})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/subscribers/<hash_msisdn>')
+def api_subscriber_details(hash_msisdn):
+    """Get subscriber details by hash MSISDN"""
+    try:
+        subscriber = telecom_handler.find_subscriber_by_hash(hash_msisdn)
+        if subscriber:
+            return jsonify({'success': True, 'subscriber': subscriber})
+        else:
+            return jsonify({'success': False, 'message': 'Subscriber not found'}), 404
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/subscribers/<hash_msisdn>/products')
+def api_subscriber_products(hash_msisdn):
+    """Get subscriber products"""
+    try:
+        products = telecom_handler.get_subscriber_products(hash_msisdn)
+        return jsonify({'success': True, 'products': products, 'count': len(products)})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/subscribers/<hash_msisdn>/services')
+def api_subscriber_services(hash_msisdn):
+    """Get subscriber services"""
+    try:
+        services = telecom_handler.get_subscriber_services(hash_msisdn)
+        return jsonify({'success': True, 'services': services, 'count': len(services)})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/subscribers', methods=['POST'])
+def api_create_subscriber():
+    """Create a new subscriber"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'message': 'No data provided'}), 400
+        
+        subscriber = telecom_handler.insert_subscriber(data)
+        return jsonify({'success': True, 'subscriber': subscriber}), 201
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/api/subscribers/sample', methods=['POST'])
+def api_create_sample_subscriber():
+    """Create a sample subscriber for testing"""
+    try:
+        sample_data = create_sample_subscriber()
+        subscriber = telecom_handler.insert_subscriber(sample_data)
+        return jsonify({'success': True, 'subscriber': subscriber}), 201
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/api/subscribers/<hash_msisdn>', methods=['PUT'])
+def api_update_subscriber_status(hash_msisdn):
+    """Update subscriber status"""
+    try:
+        data = request.get_json()
+        status = data.get('status')
+        if not status:
+            return jsonify({'success': False, 'message': 'Status is required'}), 400
+        
+        success = telecom_handler.update_subscriber_status(hash_msisdn, status)
+        if success:
+            return jsonify({'success': True, 'message': 'Status updated successfully'})
+        else:
+            return jsonify({'success': False, 'message': 'Subscriber not found'}), 404
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/subscribers/delete/<hash_msisdn>', methods=['DELETE'])
+def delete_subscriber_api(hash_msisdn):
+    """API endpoint to delete a subscriber"""
+    try:
+        success = telecom_handler.delete_subscriber(hash_msisdn)
+        if success:
+            return jsonify({"success": True, "message": "Subscriber deleted successfully"})
+        else:
+            return jsonify({"success": False, "message": "Subscriber not found"}), 404
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+# Telecom Plans API endpoints
+@app.route('/api/plans', methods=['GET'])
+def get_plans_api():
+    """API endpoint to get all telecom plans"""
+    try:
+        limit = request.args.get('limit', 100, type=int)
+        plans = telecom_handler.get_all_plans(limit=limit)
+        return jsonify({"success": True, "plans": plans})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+@app.route('/api/plans/<plan_id>', methods=['GET'])
+def get_plan_api(plan_id):
+    """API endpoint to get a specific plan"""
+    try:
+        plan = telecom_handler.get_plan_by_id(plan_id)
+        if plan:
+            return jsonify({"success": True, "plan": plan})
+        else:
+            return jsonify({"success": False, "message": "Plan not found"}), 404
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+@app.route('/api/plans', methods=['POST'])
+def create_plan_api():
+    """API endpoint to create a new plan"""
+    try:
+        plan_data = request.get_json()
+        result = telecom_handler.insert_plan(plan_data)
+        return jsonify({"success": True, "result": result})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+@app.route('/api/plans/<plan_id>/status', methods=['PUT'])
+def update_plan_status_api(plan_id):
+    """API endpoint to update plan status"""
+    try:
+        data = request.get_json()
+        is_active = data.get('isActive', True)
+        success = telecom_handler.update_plan_status(plan_id, is_active)
+        if success:
+            return jsonify({"success": True, "message": "Plan status updated successfully"})
+        else:
+            return jsonify({"success": False, "message": "Plan not found"}), 404
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+@app.route('/api/plans/delete/<plan_id>', methods=['DELETE'])
+def delete_plan_api(plan_id):
+    """API endpoint to delete a plan"""
+    try:
+        success = telecom_handler.delete_plan(plan_id)
+        if success:
+            return jsonify({"success": True, "message": "Plan deleted successfully"})
+        else:
+            return jsonify({"success": False, "message": "Plan not found"}), 404
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5001)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Script to insert 10 dummy telecom subscriber records into MongoDB
+Script to insert 10 dummy subscriber records into MongoDB subscribers collection
 """
 
 import os
@@ -8,22 +8,22 @@ import hashlib
 import base64
 from datetime import datetime, timedelta
 import random
-from telecom_data_handler import TelecomDataHandler
+from database import DatabaseManager
 from dotenv import load_dotenv
 
 load_dotenv()
 
 # Sample data for generating realistic telecom subscribers
 PROVIDERS = ["VF", "JIO", "AIRTEL", "BSNL", "IDEA"]
-SUBSCRIPTION_TYPES = ["PR", "PO", "HY"]
+SUBSCRIPTION_TYPES = ["PREPAID", "POSTPAID", "HYBRID"]
 CIRCLE_IDS = ["0001", "0002", "0003", "0004", "0005", "0006", "0007", "0008", "0009", "0010"]
 LOGIN_CHANNELS = ["VF-CON-APP", "JIO-APP", "AIRTEL-APP", "WEB-PORTAL", "USSD", "SMS"]
 NATIONALITIES = ["IND", "USA", "GBR", "AUS", "CAN"]
 
 PRODUCT_NAMES = [
     "RI3GV84HDR0D1P5G", "RI3GV0WR0D0G_84", "RI3GV84HDR0D2G", "CLUB_4G", 
-    "II3GV84DR0D1G", "II3GV28DR0D1P4G", "II3GV84DR0D1P4G", "DATA_PACK_1GB",
-    "VOICE_UNLIMITED", "SMS_PACK_100"
+    "II3GV84DR0D1G", "II3GV28DR0D1P4G", "II3GV84DR0D1P4G", "IC",
+    "DATA_PACK_1GB", "VOICE_UNLIMITED", "SMS_PACK_100", "ROAMING_PACK"
 ]
 
 SERVICE_NAMES = ["VOLTE", "VoWiFi", "5G", "4G", "SMS", "DATA", "ROAMING", "ISD"]
@@ -38,29 +38,6 @@ def generate_hash_msisdn():
     # Generate a random phone number and hash it
     phone = f"91{random.randint(7000000000, 9999999999)}"
     return hashlib.sha256(phone.encode()).hexdigest().upper()
-
-def generate_products():
-    """Generate random products for subscriber"""
-    num_products = random.randint(1, 5)
-    products = []
-    
-    for i in range(num_products):
-        start_date = datetime.now() - timedelta(days=random.randint(30, 365))
-        end_date = start_date + timedelta(days=random.randint(30, 180))
-        
-        product = {
-            "id": str(random.randint(5000, 9999)),
-            "productType": "D",
-            "type": "D",
-            "name": random.choice(PRODUCT_NAMES),
-            "description": random.choice(PRODUCT_NAMES),
-            "status": random.choice(["A", "I"]),
-            "startDate": start_date.strftime("%Y-%m-%dT%H:%M:%S"),
-            "terminationDate": end_date.strftime("%Y-%m-%dT%H:%M:%S") if random.choice([True, False]) else ""
-        }
-        products.append(product)
-    
-    return products
 
 def generate_services():
     """Generate random services for subscriber"""
@@ -85,12 +62,37 @@ def generate_services():
     
     return services
 
+def generate_products():
+    """Generate random products for subscriber matching sample structure"""
+    num_products = random.randint(3, 8)  # Match sample which has 8 products
+    products = []
+    
+    for i in range(num_products):
+        start_date = datetime.now() - timedelta(days=random.randint(30, 1095))
+        end_date = start_date + timedelta(days=random.randint(30, 365))
+        
+        product_name = random.choice(PRODUCT_NAMES)
+        
+        product = {
+            "id": str(random.randint(3000, 9999)),
+            "productType": "D",
+            "type": "D",
+            "name": product_name,
+            "description": product_name if product_name != "IC" else "Incoming Calls",
+            "status": "A",  # Most products in sample are active
+            "startDate": start_date.strftime("%Y-%m-%dT%H:%M:%S"),
+            "terminationDate": end_date.strftime("%Y-%m-%dT%H:%M:%S") if random.choice([True, False, False]) else ""  # Most don't have termination date
+        }
+        products.append(product)
+    
+    return products
+
 def generate_subscriber_data():
-    """Generate realistic telecom subscriber data"""
+    """Generate realistic telecom subscriber data matching the exact sample structure"""
     hash_msisdn = generate_hash_msisdn()
     provider = random.choice(PROVIDERS)
     
-    # Generate dates
+    # Generate dates in the exact format from sample
     first_recharge = datetime.now() - timedelta(days=random.randint(365, 1095))
     last_login = datetime.now() - timedelta(days=random.randint(1, 30))
     storage_date = datetime.now() - timedelta(days=random.randint(1, 180))
@@ -100,12 +102,12 @@ def generate_subscriber_data():
         "msisdn": generate_encrypted_field(),
         "birthDate": generate_encrypted_field(),
         "circleID": random.choice(CIRCLE_IDS),
-        "dateofStorage": storage_date.isoformat(),
+        "dateofStorage": storage_date.strftime("%Y-%m-%dT%H:%M:%S"),
         "familyName": generate_encrypted_field(),
         "givenName": generate_encrypted_field(),
         "middleName": "",
         "provider": provider,
-        "subscriptionType": random.choice(SUBSCRIPTION_TYPES),
+        "subscriptionType": "PR" if random.choice([True, False]) else "PO",  # Use PR/PO format
         "contactMedium": {
             "alternateNumber": generate_encrypted_field(),
             "emailAddress": generate_encrypted_field(),
@@ -129,7 +131,7 @@ def generate_subscriber_data():
         "status": random.choice(["A", "I"]),
         "encryptedWithNew": "Y",
         "fatherName": "Fname",
-        "nationality": random.choice(NATIONALITIES),
+        "nationality": random.choice(["IND", "ooo", "USA"]),
         "firstRechargeDate": first_recharge.strftime("%Y-%m-%dT%H:%M:%S"),
         "activeMsisdn": random.choice(["Y", "N"]),
         "lastLoginChannel": random.choice(LOGIN_CHANNELS),
@@ -141,14 +143,22 @@ def generate_subscriber_data():
     }
 
 def main():
-    """Insert 10 dummy telecom subscriber records into MongoDB"""
+    """Insert 10 dummy subscriber records into MongoDB"""
     # Ensure we're using MongoDB
     os.environ['DATABASE_TYPE'] = 'mongodb'
     
-    # Initialize telecom handler
-    telecom_handler = TelecomDataHandler()
+    # Initialize database manager
+    db_manager = DatabaseManager()
     
-    print("🚀 Inserting 10 dummy telecom subscriber records into MongoDB...")
+    # Get the subscribers collection
+    subscribers_collection = db_manager.database.subscribers
+    
+    # Clear existing data to regenerate with correct structure
+    print("🗑️  Clearing existing subscriber records...")
+    delete_result = subscribers_collection.delete_many({})
+    print(f"   Deleted {delete_result.deleted_count} existing records")
+    
+    print("🚀 Inserting 10 dummy subscriber records into MongoDB...")
     print(f"📊 Database: vil_dxl_dds")
     print(f"📋 Collection: subscribers")
     
@@ -158,7 +168,7 @@ def main():
     for i in range(10):
         try:
             subscriber_data = generate_subscriber_data()
-            result = telecom_handler.insert_subscriber(subscriber_data)
+            result = subscribers_collection.insert_one(subscriber_data)
             inserted_count += 1
             print(f"✅ {i+1:2d}. Provider: {subscriber_data['provider']} | Hash: {subscriber_data['hashMsisdn'][:16]}... | Status: {subscriber_data['status']}")
         except Exception as e:
@@ -174,17 +184,26 @@ def main():
     
     # Get final stats
     try:
-        stats = telecom_handler.get_database_stats()
+        total_subscribers = subscribers_collection.count_documents({})
+        active_subscribers = subscribers_collection.count_documents({"status": "A"})
+        
+        # Provider distribution
+        provider_pipeline = [
+            {"$group": {"_id": "$provider", "count": {"$sum": 1}}},
+            {"$sort": {"count": -1}}
+        ]
+        provider_dist = list(subscribers_collection.aggregate(provider_pipeline))
+        
         print(f"\n📊 Database Statistics:")
-        print(f"   📱 Total Subscribers: {stats.get('total_subscribers', 0)}")
-        print(f"   ✅ Active Subscribers: {stats.get('active_subscribers', 0)}")
+        print(f"   📱 Total Subscribers: {total_subscribers}")
+        print(f"   ✅ Active Subscribers: {active_subscribers}")
         print(f"   📡 Provider Distribution:")
-        for provider in stats.get('provider_distribution', []):
+        for provider in provider_dist:
             print(f"      - {provider['_id']}: {provider['count']} subscribers")
     except Exception as e:
         print(f"   ⚠️  Could not fetch stats: {str(e)}")
     
-    print(f"\n🎉 Dummy subscriber data insertion complete!")
+    print(f"\n🎉 Dummy subscriber records insertion complete!")
     print(f"💡 Visit http://localhost:5001 to view the subscriber records")
 
 if __name__ == "__main__":

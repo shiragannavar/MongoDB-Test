@@ -26,7 +26,7 @@ class DatabaseManager:
     def _setup_mongodb(self):
         """Setup MongoDB connection"""
         uri = os.getenv('MONGODB_URI', 'mongodb://localhost:27017/')
-        database_name = os.getenv('MONGODB_DATABASE', 'user_profiles')
+        database_name = os.getenv('MONGODB_DATABASE', 'vil_dxl_dds')
         
         self.client = MongoClient(uri)
         self.database = self.client[database_name]
@@ -92,18 +92,18 @@ class DatabaseManager:
         return result.deleted_count > 0
     
     def sync_mongodb_to_hcd(self) -> Dict[str, Any]:
-        """Sync all MongoDB records to HCD without transformation"""
+        """Sync all MongoDB records to DataStax HCD"""
         if self.db_type != 'mongodb':
-            return {"success": False, "message": "Sync only available from MongoDB"}
+            return {'success': False, 'message': 'Can only sync from MongoDB to HCD'}
         
         try:
-            # Get all users from current MongoDB collection
-            mongodb_users = list(self.collection.find({}))
+            # Get all users from MongoDB
+            mongodb_users = self.get_all_users()
             
             if not mongodb_users:
-                return {"success": True, "message": "No users to sync", "synced_count": 0}
+                return {'success': True, 'message': 'No users to sync', 'synced_count': 0}
             
-            # Setup HCD connection temporarily
+            # Create HCD connection
             hcd_manager = DatabaseManager()
             hcd_manager.db_type = 'hcd'
             hcd_manager._setup_hcd()
@@ -113,27 +113,84 @@ class DatabaseManager:
             
             for user in mongodb_users:
                 try:
-                    # Insert user into HCD as-is (no transformation)
-                    hcd_manager.collection.insert_one(user)
+                    # Remove MongoDB-specific _id if it exists and create new one
+                    if '_id' in user:
+                        del user['_id']
+                    
+                    # Create user in HCD
+                    hcd_manager.create_user(user)
                     synced_count += 1
                 except Exception as e:
-                    # Skip if user already exists or other errors
-                    errors.append(f"User {user.get('_id', 'unknown')}: {str(e)}")
-                    continue
+                    errors.append(f"Error syncing user {user.get('name', 'unknown')}: {str(e)}")
             
-            message = f"Successfully synced {synced_count} users to DataStax HCD"
+            message = f'Successfully synced {synced_count} users to DataStax HCD'
             if errors:
-                message += f". {len(errors)} users skipped (likely duplicates)"
+                message += f'. {len(errors)} errors occurred.'
             
             return {
-                "success": True, 
-                "message": message,
-                "synced_count": synced_count,
-                "errors": errors[:5]  # Return first 5 errors only
+                'success': True,
+                'message': message,
+                'synced_count': synced_count,
+                'errors': errors
             }
             
         except Exception as e:
-            return {"success": False, "message": f"Sync failed: {str(e)}"}
+            return {'success': False, 'message': f'Sync failed: {str(e)}'}
+    
+    def sync_subscribers_to_hcd(self) -> Dict[str, Any]:
+        """Sync all MongoDB subscriber records to DataStax HCD"""
+        if self.db_type != 'mongodb':
+            return {'success': False, 'message': 'Can only sync from MongoDB to HCD'}
+        
+        try:
+            # Get all subscribers from MongoDB
+            from telecom_data_handler import TelecomDataHandler
+            mongodb_handler = TelecomDataHandler()
+            mongodb_subscribers = mongodb_handler.get_all_subscribers(limit=100)  # Limit to 100 for migration
+            
+            if not mongodb_subscribers:
+                return {'success': True, 'message': 'No subscribers to sync', 'synced_count': 0}
+            
+            # Create HCD telecom handler
+            hcd_manager = DatabaseManager()
+            hcd_manager.db_type = 'hcd'
+            hcd_manager._setup_hcd()
+            
+            # Create HCD subscribers collection
+            try:
+                hcd_subscribers_collection = hcd_manager.database.create_collection("subscribers")
+            except Exception:
+                hcd_subscribers_collection = hcd_manager.database.get_collection("subscribers")
+            
+            synced_count = 0
+            errors = []
+            
+            for subscriber in mongodb_subscribers:
+                try:
+                    # Remove MongoDB-specific _id if it exists
+                    if '_id' in subscriber:
+                        del subscriber['_id']
+                    
+                    # Insert subscriber into HCD
+                    hcd_subscribers_collection.insert_one(subscriber)
+                    synced_count += 1
+                except Exception as e:
+                    hash_msisdn = subscriber.get('hashMsisdn', 'unknown')
+                    errors.append(f"Error syncing subscriber {hash_msisdn[:16]}...: {str(e)}")
+            
+            message = f'Successfully synced {synced_count} subscribers to DataStax HCD'
+            if errors:
+                message += f'. {len(errors)} errors occurred.'
+            
+            return {
+                'success': True,
+                'message': message,
+                'synced_count': synced_count,
+                'errors': errors
+            }
+            
+        except Exception as e:
+            return {'success': False, 'message': f'Subscriber sync failed: {str(e)}'}
     
     def get_database_info(self) -> Dict[str, str]:
         """Get information about current database connection"""

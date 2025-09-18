@@ -288,12 +288,16 @@ class MongoToHCDMigrator:
             logger.error("💥 Migration aborted: HCD connection failed")
             return False
         
-        # Process first 10,000 documents
-        max_docs = 10000
-        logger.info(f"📊 Processing first {max_docs} documents from MongoDB")
+        # Get total document count from MongoDB
+        total_docs = self.mongodb_db.subscribers.count_documents({})
+        if total_docs == 0:
+            logger.warning("⚠️  No documents found in MongoDB subscribers collection")
+            return True
+        
+        logger.info(f"📊 Processing all {total_docs} documents from MongoDB")
         logger.info(f"📦 Processing in batches of {self.batch_size}")
         
-        total_batches = (max_docs + self.batch_size - 1) // self.batch_size
+        total_batches = (total_docs + self.batch_size - 1) // self.batch_size
         logger.info(f"🔢 Total batches: {total_batches}")
         
         # Migration statistics
@@ -307,7 +311,7 @@ class MongoToHCDMigrator:
             skip = (batch_num - 1) * self.batch_size
             
             # Calculate remaining documents to process
-            remaining_docs = max_docs - skip
+            remaining_docs = total_docs - skip
             if remaining_docs <= 0:
                 break
                 
@@ -350,7 +354,7 @@ class MongoToHCDMigrator:
         logger.info(f"\n{'='*60}")
         logger.info("🎉 MIGRATION COMPLETED")
         logger.info(f"{'='*60}")
-        logger.info(f"📊 Total Documents Processed: {max_docs}")
+        logger.info(f"📊 Total Documents Available: {total_docs}")
         logger.info(f"✅ Successfully Migrated: {total_migrated}")
         logger.info(f"❌ Errors: {total_errors}")
         logger.info(f"⏱️  Duration: {duration:.2f} seconds")

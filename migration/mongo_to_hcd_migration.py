@@ -285,8 +285,8 @@ class MongoToHCDMigrator:
             logger.error("💥 Migration aborted: HCD connection failed")
             return False
         
-        # Process only first 100 documents
-        max_docs = 100
+        # Process first 10,000 documents
+        max_docs = 10000
         logger.info(f"📊 Processing first {max_docs} documents from MongoDB")
         logger.info(f"📦 Processing in batches of {self.batch_size}")
         

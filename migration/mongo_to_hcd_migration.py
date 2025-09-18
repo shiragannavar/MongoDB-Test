@@ -203,6 +203,7 @@ class MongoToHCDMigrator:
                 result = self.hcd_collection.insert_many(batch)
                 success_count = len(result.inserted_ids) if hasattr(result, 'inserted_ids') else len(batch)
                 
+                # Silent success for insert_many - only log batch completion
                 with self._lock:
                     logger.info(f"✅ {batch_name} completed: {success_count}/{len(batch)} documents written successfully [Thread: {thread_id}]")
                 
@@ -218,10 +219,12 @@ class MongoToHCDMigrator:
                     try:
                         self.hcd_collection.insert_one(doc)
                         success_count += 1
+                        # Silent success - no logging for successful inserts
                     except Exception as doc_error:
                         hash_msisdn = doc.get('hashMsisdn', 'unknown')
                         with self._lock:
                             logger.error(f"   ❌ {batch_name}: Failed to write document {hash_msisdn[:16]}...: {str(doc_error)}")
+                            logger.error(f"   📄 Failed MongoDB Record: {doc}")
                 
                 with self._lock:
                     logger.info(f"✅ {batch_name} completed: {success_count}/{len(batch)} documents written successfully [Thread: {thread_id}]")

@@ -288,64 +288,66 @@ class MongoToHCDMigrator:
             logger.error("💥 Migration aborted: HCD connection failed")
             return False
         
-        # Get total document count from MongoDB
-        total_docs = self.mongodb_db.subscribers.count_documents({})
-        if total_docs == 0:
-            logger.warning("⚠️  No documents found in MongoDB subscribers collection")
-            return True
-        
-        logger.info(f"📊 Processing all {total_docs} documents from MongoDB")
+        # Skip expensive count operation for large collections
+        logger.info("📊 Processing all documents from MongoDB collection (streaming mode)")
         logger.info(f"📦 Processing in batches of {self.batch_size}")
-        
-        total_batches = (total_docs + self.batch_size - 1) // self.batch_size
-        logger.info(f"🔢 Total batches: {total_batches}")
+        logger.info("🔢 Total batches: Will be determined dynamically during processing")
         
         # Migration statistics
         total_migrated = 0
         total_errors = 0
         start_time = time.time()
         
-        # Prepare batch tasks for threading
-        batch_tasks = []
-        for batch_num in range(1, total_batches + 1):
-            skip = (batch_num - 1) * self.batch_size
-            
-            # Calculate remaining documents to process
-            remaining_docs = total_docs - skip
-            if remaining_docs <= 0:
-                break
-                
-            # Adjust batch size for last batch
-            current_batch_size = min(self.batch_size, remaining_docs)
-            batch_tasks.append((batch_num, skip, current_batch_size))
+        # Use streaming approach for large collections
+        logger.info(f"🧵 Using {self.max_threads} threads for parallel processing")
         
-        logger.info(f"🧵 Using {min(self.max_threads, len(batch_tasks))} threads for parallel processing")
-        
-        # Process batches using ThreadPoolExecutor
+        # Process batches using ThreadPoolExecutor with dynamic batch generation
         with ThreadPoolExecutor(max_workers=self.max_threads, thread_name_prefix="HCD-Worker") as executor:
-            # Submit all batch tasks
-            future_to_batch = {}
-            for batch_num, skip, current_batch_size in batch_tasks:
-                future = executor.submit(self._process_single_batch, batch_num, skip, current_batch_size)
-                future_to_batch[future] = batch_num
-            
-            # Process completed batches
+            batch_num = 0
+            skip = 0
+            active_futures = {}
             completed_batches = 0
-            for future in as_completed(future_to_batch):
-                batch_num = future_to_batch[future]
-                try:
-                    migrated_count, error_count = future.result()
-                    total_migrated += migrated_count
-                    total_errors += error_count
-                    completed_batches += 1
+            
+            while True:
+                # Keep submitting new batches while we have available threads
+                while len(active_futures) < self.max_threads:
+                    batch_num += 1
                     
-                    # Progress update
-                    progress = (completed_batches / len(batch_tasks)) * 100
-                    logger.info(f"📈 Progress: {progress:.1f}% ({completed_batches}/{len(batch_tasks)} batches completed)")
+                    # Check if there are more documents to process
+                    test_batch = self.read_mongodb_batch(skip, 1)  # Test with 1 document
+                    if not test_batch:
+                        # No more documents, break the submission loop
+                        break
                     
-                except Exception as e:
-                    logger.error(f"❌ Batch {batch_num} failed with error: {str(e)}")
-                    total_errors += self.batch_size
+                    # Submit actual batch for processing
+                    future = executor.submit(self._process_single_batch, batch_num, skip, self.batch_size)
+                    active_futures[future] = batch_num
+                    skip += self.batch_size
+                    
+                    logger.info(f"📤 Submitted Batch {batch_num} for processing [Skip: {skip - self.batch_size}]")
+                
+                # If no active futures and no more documents, we're done
+                if not active_futures:
+                    break
+                
+                # Process completed batches
+                for future in as_completed(active_futures):
+                    batch_num_completed = active_futures[future]
+                    try:
+                        migrated_count, error_count = future.result()
+                        total_migrated += migrated_count
+                        total_errors += error_count
+                        completed_batches += 1
+                        
+                        logger.info(f"📈 Completed Batch {batch_num_completed}: {migrated_count} migrated, {error_count} errors (Total: {total_migrated} migrated)")
+                        
+                    except Exception as e:
+                        logger.error(f"❌ Batch {batch_num_completed} failed with error: {str(e)}")
+                        total_errors += self.batch_size
+                    
+                    # Remove completed future
+                    del active_futures[future]
+                    break  # Process one completion at a time
         
         # Final statistics
         end_time = time.time()
@@ -354,7 +356,7 @@ class MongoToHCDMigrator:
         logger.info(f"\n{'='*60}")
         logger.info("🎉 MIGRATION COMPLETED")
         logger.info(f"{'='*60}")
-        logger.info(f"📊 Total Documents Available: {total_docs}")
+        logger.info(f"📊 Total Documents Processed: {total_migrated + total_errors}")
         logger.info(f"✅ Successfully Migrated: {total_migrated}")
         logger.info(f"❌ Errors: {total_errors}")
         logger.info(f"⏱️  Duration: {duration:.2f} seconds")

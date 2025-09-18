@@ -19,6 +19,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dotenv import load_dotenv
 import pymongo
 from astrapy import DataAPIClient
+from astrapy.authentication import UsernamePasswordTokenProvider
 from astrapy.constants import Environment
 
 # Load environment variables
@@ -95,11 +96,11 @@ class MongoToHCDMigrator:
             if not all([api_endpoint, username, password]):
                 raise ValueError("HCD configuration incomplete. Check HCD_API_ENDPOINT, HCD_USERNAME, and HCD_PASSWORD")
             
-            # Create token for authentication
-            token = f"{username}:{password}"
+            # Create proper token provider for authentication
+            token_provider = UsernamePasswordTokenProvider(username, password)
             
             self.hcd_client = DataAPIClient(environment=Environment.HCD)
-            database = self.hcd_client.get_database(api_endpoint, token=token)
+            database = self.hcd_client.get_database(api_endpoint, token=token_provider)
             
             # Ensure keyspace exists
             try:
@@ -108,15 +109,12 @@ class MongoToHCDMigrator:
             except Exception:
                 logger.info(f"📁 Keyspace already exists: {keyspace}")
             
-            # Get database with keyspace
-            self.hcd_db = database.get_database_admin().get_database(keyspace=keyspace)
-            
-            # Create or get subscribers collection
+            # Get collection with keyspace (following the sample code pattern)
             try:
-                self.hcd_collection = self.hcd_db.create_collection("subscribers")
+                self.hcd_collection = database.create_collection("subscribers", keyspace=keyspace)
                 logger.info("📋 Created 'subscribers' collection in HCD")
             except Exception:
-                self.hcd_collection = self.hcd_db.get_collection("subscribers")
+                self.hcd_collection = database.get_collection("subscribers", keyspace=keyspace)
                 logger.info("📋 Using existing 'subscribers' collection in HCD")
             
             logger.info("✅ DataStax HCD connection established successfully")

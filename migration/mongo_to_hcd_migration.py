@@ -72,10 +72,6 @@ class MongoToHCDMigrator:
             
             logger.info("✅ MongoDB connection established successfully")
             
-            # Get collection info
-            subscribers_count = self.mongodb_db.subscribers.count_documents({})
-            logger.info(f"📊 Found {subscribers_count} subscriber records in MongoDB")
-            
             return True
             
         except Exception as e:
@@ -212,16 +208,12 @@ class MongoToHCDMigrator:
             logger.error("💥 Migration aborted: HCD connection failed")
             return False
         
-        # Get total document count
-        total_docs = self.mongodb_db.subscribers.count_documents({})
-        if total_docs == 0:
-            logger.warning("⚠️  No documents found in MongoDB subscribers collection")
-            return True
-        
-        logger.info(f"📊 Total documents to migrate: {total_docs}")
+        # Process only first 100 documents
+        max_docs = 100
+        logger.info(f"📊 Processing first {max_docs} documents from MongoDB")
         logger.info(f"📦 Processing in batches of {self.batch_size}")
         
-        total_batches = (total_docs + self.batch_size - 1) // self.batch_size
+        total_batches = (max_docs + self.batch_size - 1) // self.batch_size
         logger.info(f"🔢 Total batches: {total_batches}")
         
         # Migration statistics
@@ -233,12 +225,20 @@ class MongoToHCDMigrator:
         for batch_num in range(1, total_batches + 1):
             skip = (batch_num - 1) * self.batch_size
             
+            # Calculate remaining documents to process
+            remaining_docs = max_docs - skip
+            if remaining_docs <= 0:
+                break
+                
+            # Adjust batch size for last batch
+            current_batch_size = min(self.batch_size, remaining_docs)
+            
             logger.info(f"\n{'='*60}")
             logger.info(f"🔄 Processing Batch {batch_num}/{total_batches}")
             logger.info(f"{'='*60}")
             
             # Read batch from MongoDB
-            batch = self.read_mongodb_batch(skip, self.batch_size)
+            batch = self.read_mongodb_batch(skip, current_batch_size)
             
             if not batch:
                 logger.warning(f"⚠️  Batch {batch_num} is empty, skipping...")
@@ -264,7 +264,7 @@ class MongoToHCDMigrator:
         logger.info(f"\n{'='*60}")
         logger.info("🎉 MIGRATION COMPLETED")
         logger.info(f"{'='*60}")
-        logger.info(f"📊 Total Documents: {total_docs}")
+        logger.info(f"📊 Total Documents Processed: {max_docs}")
         logger.info(f"✅ Successfully Migrated: {total_migrated}")
         logger.info(f"❌ Errors: {total_errors}")
         logger.info(f"⏱️  Duration: {duration:.2f} seconds")

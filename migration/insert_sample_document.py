@@ -72,11 +72,11 @@ class SampleDocumentInserter:
             
             # Get collection with keyspace (following the sample code pattern)
             try:
-                self.hcd_collection = database.create_collection("subscribers", keyspace=keyspace)
-                logger.info("📋 Created 'subscribers' collection in HCD")
+                self.hcd_collection = database.create_collection("subscriber", keyspace=keyspace)
+                logger.info("📋 Created 'subscriber' collection in HCD")
             except Exception:
-                self.hcd_collection = database.get_collection("subscribers", keyspace=keyspace)
-                logger.info("📋 Using existing 'subscribers' collection in HCD")
+                self.hcd_collection = database.get_collection("subscriber", keyspace=keyspace)
+                logger.info("📋 Using existing 'subscriber' collection in HCD")
             
             logger.info("✅ DataStax HCD connection established successfully")
             return True
